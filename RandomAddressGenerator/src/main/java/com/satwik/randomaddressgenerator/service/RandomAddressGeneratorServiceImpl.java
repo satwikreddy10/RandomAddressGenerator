@@ -1,11 +1,9 @@
 package com.satwik.randomaddressgenerator.service;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import com.github.javafaker.Faker;
@@ -13,39 +11,37 @@ import com.github.javafaker.Faker;
 @Component
 public class RandomAddressGeneratorServiceImpl implements RandomAddressGeneratorService {
 
-	@Autowired
-	private AddressDao addressDao;
-
 	@Override
 	/**
-	 * This method is using a library which gets the random fake address.
+	 * This method is using a library which gets the random fake address and also
+	 * using the Locale for getting the ISO3Country codes
 	 */
 	public Address getRandomAdress(final String country) {
-
-		List<String> countries = addressDao.getCountries();
-		if (!countries.contains(country)) {
+		String localeCountryName = CountryEnum.getCountryName(country);
+		if (localeCountryName == null) {
 			return null;
 		}
 		final Faker faker = new Faker();
-		Address address = new Address();
+		final Address address = new Address();
 		address.setStreet(faker.address().buildingNumber() + " " + faker.address().streetName());
 		address.setHouse("Apt" + faker.number().digits(3));
 		address.setCity(faker.address().city());
 		address.setCountry(country);
 		address.setCounty(faker.address().cityName());
-		Map<String, String> localeCountries = new HashMap<>();
-		for (String iso : Locale.getISOCountries()) {
+		final Map<String, String> iso3CountryMap = new HashMap<>();
+
+		for (final String iso : Locale.getISOCountries()) {
 			Locale l = new Locale("", iso);
-			localeCountries.put(l.getDisplayCountry(), l.getISO3Country());
+			iso3CountryMap.put(l.getDisplayCountry().toUpperCase(), l.getISO3Country());
 		}
-		String countryCode = localeCountries.get(country);
-		if (countryCode == null) {
-			Locale locale = new Locale("", country);
-			countryCode = locale.getISO3Country();
-			address.setCountryCode(countryCode);
-		} else {
-			address.setCountryCode(localeCountries.get(country));
+		
+		if (iso3CountryMap.containsKey(localeCountryName)) {
+			address.setCountryCode(iso3CountryMap.get(localeCountryName));
 		}
+		else {
+			return null;
+		}
+		address.setCountry(country);
 		address.setState(faker.address().state());
 		address.setStateCode(faker.address().stateAbbr());
 		address.setPostalCode(faker.address().zipCode());
